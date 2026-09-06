@@ -35,5 +35,6 @@
 	<ItemGroup>
 		<PackageReference Include="QuantConnect.Lean.Engine" Version="2.5.*" />
 		<PackageReference Include="QuantConnect.Common" Version="2.5.*" />
+		<PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
 	</ItemGroup>
 </Project>
