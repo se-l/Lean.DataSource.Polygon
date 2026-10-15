@@ -48,7 +48,7 @@ namespace QuantConnect.Lean.DataSource.Polygon
         /// Maps a combination of <see cref="SecurityType"/> and <see cref="TickType"/> 
         /// to the corresponding <see cref="EventType"/> used in WebSocket subscriptions.
         /// </summary>
-        private readonly Dictionary<(SecurityType, TickType), EventType> _eventTypes = [];
+        private readonly Dictionary<(SecurityType, TickType), EventType> _eventTypes = new();
 
         /// <summary>
         /// On Authenticated event

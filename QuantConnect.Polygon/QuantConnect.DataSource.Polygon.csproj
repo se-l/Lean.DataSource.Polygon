@@ -2,7 +2,8 @@
 	<PropertyGroup>
 		<Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
+		<OutDir>../../Lean/Launcher/bin/$(Configuration)/</OutDir>
 		<Product>QuantConnect.Lean.DataSource.Polygon</Product>
 		<AssemblyName>QuantConnect.Lean.DataSource.Polygon</AssemblyName>
 		<RootNamespace>QuantConnect.Lean.DataSource.Polygon</RootNamespace>
@@ -33,8 +34,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="QuantConnect.Lean.Engine" Version="2.5.*" />
-		<PackageReference Include="QuantConnect.Common" Version="2.5.*" />
 		<PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Lean\Algorithm\QuantConnect.Algorithm.csproj" />
+	  <ProjectReference Include="..\..\Lean\Engine\QuantConnect.Lean.Engine.csproj" />
 	</ItemGroup>
 </Project>

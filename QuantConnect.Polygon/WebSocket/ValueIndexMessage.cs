@@ -23,7 +23,7 @@ public class ValueIndexMessage
     /// The type of event this message represents (e.g. "A"/"AM" for second/minute aggregates)
     /// </summary>
     [JsonProperty("ev")]
-    public required string EventType { get; set; }
+    public string EventType { get; set; }
 
     /// <summary>
     /// The value of the index.
@@ -35,7 +35,7 @@ public class ValueIndexMessage
     /// The assigned ticker of the index.
     /// </summary>
     [JsonProperty("T")]
-    public required string Symbol { get; set; }
+    public string Symbol { get; set; }
 
     /// <summary>
     /// The message timestamp in milliseconds since Unix Epoch

@@ -50,7 +50,7 @@ namespace QuantConnect.Lean.DataSource.Polygon
         ///   </item>
         /// </list>
         /// </summary>
-        public readonly ConcurrentDictionary<(TickType, Symbol), (Resolution Resolution, EventType SubscribedEventType)> _subscriptionsDataConfigs = [];
+        public readonly ConcurrentDictionary<(TickType, Symbol), (Resolution Resolution, EventType SubscribedEventType)> _subscriptionsDataConfigs = new();
 
         /// <summary>
         /// Whether or not there is at least one open socket
