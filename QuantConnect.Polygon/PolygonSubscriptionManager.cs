@@ -30,11 +30,18 @@ namespace QuantConnect.Lean.DataSource.Polygon
     /// It can handle one websocket connection per supported security type, with an optional
     /// limit on the number of subscriptions per websocket connection.
     /// </summary>
-    public class PolygonSubscriptionManager : EventBasedDataQueueHandlerSubscriptionManager
+    public class PolygonSubscriptionManager : EventBasedDataQueueHandlerSubscriptionManager, IPolygonSubscriptionManager
     {
         private int _maxSubscriptionsPerWebSocket;
         private List<PolygonWebSocketClientWrapper> _webSockets;
         private object _lock = new();
+
+        /// <summary>
+        /// Indicates whether data is being streamed using aggregates or ticks.
+        /// The streaming mode is tracked per subscription (see <see cref="_subscriptionsDataConfigs"/>),
+        /// so this manager reports tick streaming.
+        /// </summary>
+        public bool UsingAggregates => false;
 
         /// <summary>
         /// Holds the active subscription configurations for Polygon data streams.

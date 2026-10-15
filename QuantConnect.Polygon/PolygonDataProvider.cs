@@ -55,7 +55,7 @@ namespace QuantConnect.Lean.DataSource.Polygon
 
         private PolygonAggregationManager _dataAggregator;
 
-        protected PolygonSubscriptionManager _subscriptionManager;
+        protected IPolygonSubscriptionManager _subscriptionManager;
 
         private List<ExchangeMapping> _exchangeMappings;
         private readonly PolygonSymbolMapper _symbolMapper = new();
@@ -166,10 +166,19 @@ namespace QuantConnect.Lean.DataSource.Polygon
             // Initialize the subscription manager if this instance is going to be used as a data queue handler
             if (streamingEnabled)
             {
-                _subscriptionManager = new PolygonSubscriptionManager(
-                    _supportedSecurityTypes,
-                    maxSubscriptionsPerWebSocket,
-                    (securityType) => new PolygonWebSocketClientWrapper(_apiKey, _symbolMapper, securityType, OnMessage, licenseType));
+                if (Config.GetBool("polygon-use-rabbitmq"))
+                {
+                    Log.Trace($"{nameof(PolygonDataProvider)}.{nameof(Initialize)}: Streaming market data through RabbitMQ.");
+                    _subscriptionManager = new RabbitMQSubscriptionManager(_symbolMapper, OnMessage);
+                }
+                else
+                {
+                    _subscriptionManager = new PolygonSubscriptionManager(
+                        _supportedSecurityTypes,
+                        maxSubscriptionsPerWebSocket,
+                        (securityType) => new PolygonWebSocketClientWrapper(_apiKey, _symbolMapper, securityType, OnMessage, licenseType));
+                }
+
                 _dataAggregator = new PolygonAggregationManager(_subscriptionManager);
                 var openInterestManager = new PolygonOpenInterestProcessorManager(TimeProvider, RestApiClient, _symbolMapper, _subscriptionManager, _dataAggregator, GetTickTime);
                 openInterestManager.ScheduleNextRun();
@@ -224,7 +233,8 @@ namespace QuantConnect.Lean.DataSource.Polygon
 
             Log.Trace($"PolygonDataProvider.Subscribe(): Subscribing to {dataConfig.Symbol} | {dataConfig.TickType}");
 
-            if (_subscriptionManager.GetWebSocket(dataConfig.SecurityType) == null)
+            if (_subscriptionManager is PolygonSubscriptionManager websocketSubscriptionManager &&
+                websocketSubscriptionManager.GetWebSocket(dataConfig.SecurityType) == null)
             {
                 return null;
             }

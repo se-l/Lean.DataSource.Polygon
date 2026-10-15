@@ -43,5 +43,12 @@ namespace QuantConnect.Lean.DataSource.Polygon
         /// </summary>
         /// <param name="config">The subscription data configuration to unsubscribe</param>
         void Unsubscribe(SubscriptionDataConfig config);
+
+        /// <summary>
+        /// Retrieves the list of unique <see cref="Symbol"/> instances that are currently subscribed for a specific <see cref="TickType"/>.
+        /// </summary>
+        /// <param name="tickType">The type of tick data to filter subscriptions by.</param>
+        /// <returns>A collection of unique <see cref="Symbol"/> objects that match the specified <paramref name="tickType"/>.</returns>
+        IEnumerable<Symbol> GetSubscribedSymbols(TickType tickType);
     }
 }

@@ -14,6 +14,8 @@
 */
 
 using System.Text;
+using System.Collections.Concurrent;
+using System.Linq;
 using Newtonsoft.Json;
 using QuantConnect.Configuration;
 using QuantConnect.Data;
@@ -45,6 +47,11 @@ namespace QuantConnect.Lean.DataSource.Polygon
         private bool _disposed;
         private string _dataQueueName;
         private bool _optionTradeSubscriptionsEnabled;
+
+        /// <summary>
+        /// Holds the active subscription configurations, keyed by tick type and symbol.
+        /// </summary>
+        private readonly ConcurrentDictionary<(TickType TickType, Symbol Symbol), SubscriptionDataConfig> _activeSubscriptions = new();
 
         public bool IsConnected => _connection != null && _connection.IsOpen;
 
@@ -129,14 +136,30 @@ namespace QuantConnect.Lean.DataSource.Polygon
                 Log.Trace($"RabbitMQSubscriptionManager.Subscribe(): Skip subscription for Trade Subscription {config.Symbol.Value}");
                 return;
             }
+
+            _activeSubscriptions[(config.TickType, config.Symbol)] = config;
             SendSubscriptionRequest(config, "subscribe");
             BindToRoutingKey(config);
         }
 
         public void Unsubscribe(SubscriptionDataConfig config)
         {
+            _activeSubscriptions.TryRemove((config.TickType, config.Symbol), out _);
             SendSubscriptionRequest(config, "unsubscribe");
             UnbindFromRoutingKey(config);
+        }
+
+        /// <summary>
+        /// Retrieves the list of unique <see cref="Symbol"/> instances that are currently subscribed for a specific <see cref="TickType"/>.
+        /// </summary>
+        /// <param name="tickType">The type of tick data to filter subscriptions by.</param>
+        /// <returns>A collection of unique <see cref="Symbol"/> objects that match the specified <paramref name="tickType"/>.</returns>
+        public IEnumerable<Symbol> GetSubscribedSymbols(TickType tickType)
+        {
+            return _activeSubscriptions.Keys
+                .Where(subscription => subscription.TickType == tickType)
+                .Select(subscription => subscription.Symbol)
+                .Distinct();
         }
 
         private void SendSubscriptionRequest(SubscriptionDataConfig config, string action)

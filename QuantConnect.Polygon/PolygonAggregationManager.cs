@@ -25,11 +25,13 @@ namespace QuantConnect.Lean.DataSource.Polygon
     /// </summary>
     public class PolygonAggregationManager : AggregationManager
     {
-        private PolygonSubscriptionManager _subscriptionManager;
+        private readonly PolygonSubscriptionManager _websocketSubscriptionManager;
 
-        public PolygonAggregationManager(PolygonSubscriptionManager subscriptionManager)
+        public PolygonAggregationManager(IPolygonSubscriptionManager subscriptionManager)
         {
-            _subscriptionManager = subscriptionManager;
+            // Only the websocket subscription manager tracks per-subscription Polygon event types.
+            // The RabbitMQ manager streams ticks, so consolidator selection falls back to the base logic.
+            _websocketSubscriptionManager = subscriptionManager as PolygonSubscriptionManager;
         }
 
         /// <summary>
@@ -37,27 +39,30 @@ namespace QuantConnect.Lean.DataSource.Polygon
         /// </summary>
         protected override IDataConsolidator GetConsolidator(SubscriptionDataConfig config)
         {
-            if (!_subscriptionManager._subscriptionsDataConfigs.TryRemove((config.TickType, config.Symbol), out var usingEventType))
+            if (_websocketSubscriptionManager != null)
             {
-                Log.Error($"{nameof(PolygonAggregationManager)}.{nameof(GetConsolidator)}: Failed to remove subscription for Symbol={config.Symbol}, TickType={config.TickType}. " +
-                    $"The subscription may not exist or was already removed.");
+                if (!_websocketSubscriptionManager._subscriptionsDataConfigs.TryRemove((config.TickType, config.Symbol), out var usingEventType))
+                {
+                    Log.Error($"{nameof(PolygonAggregationManager)}.{nameof(GetConsolidator)}: Failed to remove subscription for Symbol={config.Symbol}, TickType={config.TickType}. " +
+                        $"The subscription may not exist or was already removed.");
+                }
+
+                switch (usingEventType.SubscribedEventType)
+                {
+                    case EventType.A when config.Resolution == Resolution.Second && config.TickType == TickType.Trade:
+                    case EventType.AM when config.Resolution == Resolution.Minute && config.TickType == TickType.Trade:
+                        return new FilteredIdentityDataConsolidator<BaseData>(data => data.GetType() == config.Type);
+                    case EventType.A when config.Resolution >= Resolution.Minute && config.TickType == TickType.Trade:
+                    case EventType.AM when config.Resolution >= Resolution.Minute && config.TickType == TickType.Trade:
+                        // Starter plan only supports streaming aggregated data.
+                        // We use the TradeBarConsolidator for TradeBar data given that we are aggregating trade bars
+                        // (that are already aggregated by Polygon) instead of ticks.
+                        return new TradeBarConsolidator(config.Resolution.ToTimeSpan());
+                }
             }
 
-            switch (usingEventType.SubscribedEventType)
-            {
-                case EventType.A when config.Resolution == Resolution.Second && config.TickType == TickType.Trade:
-                case EventType.AM when config.Resolution == Resolution.Minute && config.TickType == TickType.Trade:
-                    return new FilteredIdentityDataConsolidator<BaseData>(data => data.GetType() == config.Type);
-                case EventType.A when config.Resolution >= Resolution.Minute && config.TickType == TickType.Trade:
-                case EventType.AM when config.Resolution >= Resolution.Minute && config.TickType == TickType.Trade:
-                    // Starter plan only supports streaming aggregated data.
-                    // We use the TradeBarConsolidator for TradeBar data given that we are aggregating trade bars
-                    // (that are already aggregated by Polygon) instead of ticks.
-                    return new TradeBarConsolidator(config.Resolution.ToTimeSpan());
-                default:
-                    // Use base's method, since we can fetch ticks with Developer and Advanced plans
-                    return base.GetConsolidator(config);
-            }
+            // Use base's method, since we can fetch ticks with Developer and Advanced plans
+            return base.GetConsolidator(config);
         }
     }
 }
