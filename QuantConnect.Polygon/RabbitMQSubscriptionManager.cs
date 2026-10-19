@@ -138,6 +138,15 @@ namespace QuantConnect.Lean.DataSource.Polygon
             }
 
             _activeSubscriptions[(config.TickType, config.Symbol)] = config;
+            if (config.TickType == TickType.OpenInterest)
+            {
+                // No live stream for OpenInterest (only trades/quotes topics are supported): it is
+                // polled via PolygonOpenInterestProcessorManager, so only register it above and
+                // skip the request (which would ask for the unsupported "aggs" topic) and the
+                // routing-key binding nothing would ever publish to.
+                return;
+            }
+
             SendSubscriptionRequest(config, "subscribe");
             BindToRoutingKey(config);
         }
@@ -145,6 +154,11 @@ namespace QuantConnect.Lean.DataSource.Polygon
         public void Unsubscribe(SubscriptionDataConfig config)
         {
             _activeSubscriptions.TryRemove((config.TickType, config.Symbol), out _);
+            if (config.TickType == TickType.OpenInterest)
+            {
+                return;
+            }
+
             SendSubscriptionRequest(config, "unsubscribe");
             UnbindFromRoutingKey(config);
         }
